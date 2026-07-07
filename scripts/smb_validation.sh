@@ -16,6 +16,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Non-interactive shells (SSH, LaunchAgent) don't get Homebrew on PATH.
+UV="$(command -v uv || true)"
+for candidate in /opt/homebrew/bin/uv /usr/local/bin/uv "$HOME/.local/bin/uv" "$HOME/.cargo/bin/uv"; do
+    [ -n "$UV" ] && break
+    [ -x "$candidate" ] && UV="$candidate"
+done
+if [ -z "$UV" ]; then
+    echo "FAIL: could not locate the uv executable. Install it first." >&2
+    exit 1
+fi
+
 DEST="/Volumes/camera/Photo Library Backup/"
 MOUNT_MARKER="/Volumes/camera"
 FROM_DATE="$(date -v-2m +%Y-%m-%d)"
@@ -55,7 +66,7 @@ run_pass() {
     echo "=== Pass $n: exporting from $FROM_DATE to $DEST ==="
     local start end
     start=$(date +%s)
-    uv run osxphotos "${EXPORT_ARGS[@]}" --report "$report" 2>&1 | tee "$stdout_log"
+    "$UV" run osxphotos "${EXPORT_ARGS[@]}" --report "$report" 2>&1 | tee "$stdout_log"
     end=$(date +%s)
     echo "Pass $n duration: $((end - start))s" | tee -a "$stdout_log"
 }
