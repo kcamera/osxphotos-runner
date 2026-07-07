@@ -1,6 +1,6 @@
 """CLI entry point: `python -m osxphotos_runner <command> ...`.
 
-Commands: menubar (Phase 5), run-once, status (Phase 3). Only the two plist
+Commands: menubar (Phase 5), run-once, status. Only the two plist
 arguments (dest, publish target) configure anything; the rest is derived.
 """
 
@@ -10,8 +10,9 @@ import argparse
 import json
 import sys
 from datetime import datetime
+from importlib.metadata import version as pkg_version
 
-from . import backup, mount, paths
+from . import backup, mount, paths, stats, status
 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -47,8 +48,48 @@ def cmd_run_once(args: argparse.Namespace) -> int:
         from_date=args.from_date,
         dry_run=args.dry_run,
     )
+
+    if not args.dry_run:  # dry runs are rehearsals: never recorded as backups
+        status.append_history(result)
+        library = coverage = None
+        if result.outcome == "succeeded":
+            try:
+                gathered = stats.gather(args.dest)
+                library, coverage = gathered["library"], gathered["coverage"]
+            except Exception as e:  # stats are best-effort; the backup already ran
+                print(f"warning: stats refresh failed: {e}", file=sys.stderr)
+        if library is None and (prev := status.read_status()):
+            library, coverage = prev.get("library"), prev.get("coverage")
+        status.write_status(
+            status.build_status(
+                result.to_dict(),
+                library=library,
+                coverage=coverage,
+                schedule=None,  # owned by the menu bar scheduler (Phase 5)
+                app={"state": "run-once", "version": pkg_version("osxphotos-runner")},
+            )
+        )
+
     print(json.dumps(result.to_dict(), indent=2))
     return 0 if result.outcome == "succeeded" else 1
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    st = status.read_status()
+    if st is None:
+        print("no status recorded yet (no run has completed on this machine)", file=sys.stderr)
+        return 1
+    print(json.dumps(st, indent=2))
+    history = status.read_history()
+    if history:
+        print(f"\n{len(history)} run(s) in history; last 5:", file=sys.stderr)
+        for entry in history[-5:]:
+            print(
+                f"  {entry.get('started_at')}  {entry.get('outcome')}  "
+                f"exported={entry.get('exported')} errors={entry.get('errors')}",
+                file=sys.stderr,
+            )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -58,12 +99,14 @@ def main(argv: list[str] | None = None) -> int:
     p_run = sub.add_parser("run-once", help="run a single backup now and print the RunResult as JSON")
     _add_common(p_run)
     p_run.add_argument("--from-date", default=None, help="bound the export (testing only, never in production)")
-    p_run.add_argument("--dry-run", action="store_true", help="pass --dry-run to osxphotos export")
+    p_run.add_argument("--dry-run", action="store_true", help="pass --dry-run to osxphotos export; nothing is recorded")
     p_run.set_defaults(func=cmd_run_once)
 
-    for name, phase in (("menubar", "Phase 5"), ("status", "Phase 3")):
-        p = sub.add_parser(name, help=f"not yet implemented ({phase})")
-        p.set_defaults(func=lambda a, n=name: (print(f"{n}: not implemented yet", file=sys.stderr), 2)[1])
+    p_status = sub.add_parser("status", help="print the local status.json and recent history")
+    p_status.set_defaults(func=cmd_status)
+
+    p_menubar = sub.add_parser("menubar", help="not yet implemented (Phase 5)")
+    p_menubar.set_defaults(func=lambda a: (print("menubar: not implemented yet", file=sys.stderr), 2)[1])
 
     args = parser.parse_args(argv)
     return args.func(args)
