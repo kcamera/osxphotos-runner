@@ -86,8 +86,9 @@ fi
 
 echo
 echo "=== Checking sidecar files exist ==="
-AAE_COUNT=$(find "$DEST" -name '*.aae' | wc -l | tr -d ' ')
-XMP_COUNT=$(find "$DEST" -name '*.xmp' | wc -l | tr -d ' ')
+# -iname: osxphotos writes AAE sidecars with an uppercase .AAE extension.
+AAE_COUNT=$(find "$DEST" -iname '*.aae' | wc -l | tr -d ' ')
+XMP_COUNT=$(find "$DEST" -iname '*.xmp' | wc -l | tr -d ' ')
 echo "AAE sidecars found: $AAE_COUNT"
 echo "XMP sidecars found: $XMP_COUNT"
 if [ "$AAE_COUNT" -eq 0 ] || [ "$XMP_COUNT" -eq 0 ]; then
