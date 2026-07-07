@@ -96,7 +96,9 @@ fi
 
 echo
 echo "=== Checking --touch-file mtime behavior (heuristic) ==="
-SAMPLE_FILE=$(find "$DEST" -type f \( -iname '*.jpg' -o -iname '*.heic' -o -iname '*.png' \) | head -1)
+# -print -quit instead of "| head -1": under pipefail, head closing the pipe
+# early makes find die of SIGPIPE and fails the whole script (exit 141).
+SAMPLE_FILE=$(find "$DEST" -type f \( -iname '*.jpg' -o -iname '*.heic' -o -iname '*.png' \) -print -quit)
 if [ -n "$SAMPLE_FILE" ]; then
     MTIME=$(stat -f '%Sm' -t '%Y-%m-%d' "$SAMPLE_FILE")
     TODAY=$(date +%Y-%m-%d)
