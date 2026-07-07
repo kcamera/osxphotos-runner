@@ -136,12 +136,17 @@ def verify_smb_dest(dest: str | Path) -> MountInfo:
 def netfs_mount(smb_url: str) -> list[str]:
     """Mount *smb_url* the way Finder does; credentials come from the Keychain."""
     import Foundation  # deferred: pyobjc only needed when a mount is attempted
-    from NetFS import NetFSMountURLSync
+    import NetFS
 
     nsurl = Foundation.NSURL.URLWithString_(smb_url)
     if nsurl is None:
         raise MountError(f"invalid SMB URL: {smb_url}")
-    status, mountpoints = NetFSMountURLSync(nsurl, None, None, None, None, None, None)
+    # NoUI: this runs headless — a credential/error dialog would hang forever.
+    # Credentials must already be in the Keychain (one manual Finder mount).
+    open_options = Foundation.NSMutableDictionary.dictionaryWithDictionary_(
+        {NetFS.kNAUIOptionKey: NetFS.kNAUIOptionNoUI}
+    )
+    status, mountpoints = NetFS.NetFSMountURLSync(nsurl, None, None, None, open_options, None, None)
     if status != 0:
         raise MountError(f"NetFS mount of {smb_url} failed (status {status})")
     return list(mountpoints or [])
