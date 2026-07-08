@@ -12,7 +12,7 @@ import sys
 from datetime import datetime
 from importlib.metadata import version as pkg_version
 
-from . import backup, mount, paths, stats, status
+from . import backup, mount, paths, publish, stats, status
 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -69,6 +69,13 @@ def cmd_run_once(args: argparse.Namespace) -> int:
                 app={"state": "run-once", "version": pkg_version("osxphotos-runner")},
             )
         )
+        if args.publish_target:
+            try:
+                publish.publish(args.publish_target)
+            except publish.PublishError as e:
+                # The backup itself already ran; a publish failure must not
+                # change the run's outcome, only be visible.
+                print(f"warning: publish failed: {e}", file=sys.stderr)
 
     print(json.dumps(result.to_dict(), indent=2))
     return 0 if result.outcome == "succeeded" else 1
