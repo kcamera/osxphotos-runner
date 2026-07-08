@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Photos Backup</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Photos Backup">
+  <meta name="theme-color" content="#101418">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Photos Backup</h1>
+      <span id="refreshed" title="When this page last fetched data"></span>
+    </header>
+
+    <div id="error" class="banner error hidden"></div>
+    <div id="stale" class="banner warn hidden"></div>
+
+    <section class="card" id="last-run-card">
+      <div class="card-head">
+        <h2>Last backup</h2>
+        <span id="outcome" class="badge">…</span>
+      </div>
+      <p id="last-when" class="big">loading…</p>
+      <p id="last-detail" class="muted"></p>
+      <p id="failure" class="failure hidden"></p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Coverage</h2>
+        <span id="coverage-num" class="muted"></span>
+      </div>
+      <div class="bar"><div id="coverage-fill" class="bar-fill"></div></div>
+      <p id="library-detail" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Schedule</h2>
+      </div>
+      <p id="next-run" class="big">—</p>
+      <p id="app-detail" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>History</h2>
+        <span id="history-count" class="muted"></span>
+      </div>
+      <table id="history">
+        <thead><tr><th>When</th><th>Outcome</th><th>Exported</th><th>Duration</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button id="show-all" class="hidden">Show all</button>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

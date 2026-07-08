@@ -1,0 +1,13 @@
+{
+  "name": "Photos Backup",
+  "short_name": "Photos Backup",
+  "description": "osxphotos-runner backup status",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#101418",
+  "theme_color": "#101418",
+  "icons": [
+    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

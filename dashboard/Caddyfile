@@ -1,0 +1,9 @@
+# Plain HTTP on the LAN (no TLS -> no service worker; A2HS still works).
+:80 {
+	root * /srv/site
+	file_server
+
+	# Status data must never be cached stale by the phone.
+	@data path /data/*
+	header @data Cache-Control "no-store"
+}

@@ -1,0 +1,17 @@
+# osxphotos-runner dashboard — static site served by Caddy.
+# Deploy dir on the NAS: ~/Websites/osxphotos-dashboard/
+#   ├── docker-compose.yml   (this file)
+#   ├── Caddyfile
+#   ├── site/                (from the repo's dashboard/site/)
+#   └── data/                (rsync publish target of the Mini; never touched here)
+services:
+  dashboard:
+    image: caddy:2.8
+    container_name: osxphotos-dashboard
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv/site:ro
+      - ./data:/srv/site/data:ro
