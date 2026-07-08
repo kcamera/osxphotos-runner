@@ -495,6 +495,7 @@ source = { editable = "." }
 dependencies = [
     { name = "osxphotos" },
     { name = "pyobjc-framework-netfs" },
+    { name = "rumps" },
 ]
 
 [package.dev-dependencies]
@@ -506,6 +507,7 @@ dev = [
 requires-dist = [
     { name = "osxphotos", specifier = ">=0.76.1,<0.77" },
     { name = "pyobjc-framework-netfs", specifier = ">=12.2.1" },
+    { name = "rumps", specifier = ">=0.4.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1083,6 +1085,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/33/27/8139d912017d8d885
 wheels = [
     { url = "https://files.pythonhosted.org/packages/68/ed/bd13b916738781c860fe97fa7b0db73281d93f7989dd4f566c9f99846a93/rich_theme_manager-0.11.0-py3-none-any.whl", hash = "sha256:b9155233076eb4f9fc888ef8cf7755a3cd8efa3bfa33cee5137fc00000117d8e", size = 14881, upload-time = "2022-05-01T15:09:32.273Z" },
 ]
+
+[[package]]
+name = "rumps"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyobjc-framework-cocoa" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b2/e2/2e6a47951290bd1a2831dcc50aec4b25d104c0cf00e8b7868cbd29cf3bfe/rumps-0.4.0.tar.gz", hash = "sha256:17fb33c21b54b1e25db0d71d1d793dc19dc3c0b7d8c79dc6d833d0cffc8b1596", size = 39257, upload-time = "2022-10-15T05:15:10.386Z" }
 
 [[package]]
 name = "shortuuid"

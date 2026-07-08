@@ -1,7 +1,8 @@
 """CLI entry point: `python -m osxphotos_runner <command> ...`.
 
-Commands: menubar (Phase 5), run-once, status. Only the two plist
-arguments (dest, publish target) configure anything; the rest is derived.
+Commands: menubar (the LaunchAgent runs this), run-once, status. Only the
+two plist arguments (dest, publish target) configure anything; the rest is
+derived.
 """
 
 from __future__ import annotations
@@ -9,10 +10,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime
-from importlib.metadata import version as pkg_version
 
-from . import backup, mount, paths, publish, stats, status
+from . import mount, runner, status
 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -24,6 +23,7 @@ def _add_common(p: argparse.ArgumentParser) -> None:
         help="rsync target for status publishing, e.g. 'kcamera@nas:/path' (also used to derive the SMB host)",
     )
     p.add_argument("--smb-url", default=None, help="override the derived SMB mount URL")
+    p.add_argument("--from-date", default=None, help="bound the export (testing only, never in production)")
 
 
 def _smb_url(args: argparse.Namespace) -> str | None:
@@ -38,47 +38,33 @@ def _smb_url(args: argparse.Namespace) -> str | None:
 
 
 def cmd_run_once(args: argparse.Namespace) -> int:
-    paths.ensure_dirs()
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-    result = backup.run_backup(
+    interrupted = runner.recover_interrupted()
+    if interrupted:
+        print(f"note: recorded previous run as interrupted ({interrupted['started_at']})", file=sys.stderr)
+    result = runner.perform_run(
         args.dest,
+        args.publish_target,
         smb_url=_smb_url(args),
-        report_path=paths.runs_dir() / f"run-{run_id}-report.json",
-        log_path=paths.logs_dir() / f"run-{run_id}.log",
         from_date=args.from_date,
         dry_run=args.dry_run,
+        schedule=None,  # owned by the menu bar scheduler
+        app_state="run-once",
     )
-
-    if not args.dry_run:  # dry runs are rehearsals: never recorded as backups
-        status.append_history(result)
-        library = coverage = None
-        if result.outcome == "succeeded":
-            try:
-                gathered = stats.gather(args.dest)
-                library, coverage = gathered["library"], gathered["coverage"]
-            except Exception as e:  # stats are best-effort; the backup already ran
-                print(f"warning: stats refresh failed: {e}", file=sys.stderr)
-        if library is None and (prev := status.read_status()):
-            library, coverage = prev.get("library"), prev.get("coverage")
-        status.write_status(
-            status.build_status(
-                result.to_dict(),
-                library=library,
-                coverage=coverage,
-                schedule=None,  # owned by the menu bar scheduler (Phase 5)
-                app={"state": "run-once", "version": pkg_version("osxphotos-runner")},
-            )
-        )
-        if args.publish_target:
-            try:
-                publish.publish(args.publish_target)
-            except publish.PublishError as e:
-                # The backup itself already ran; a publish failure must not
-                # change the run's outcome, only be visible.
-                print(f"warning: publish failed: {e}", file=sys.stderr)
-
     print(json.dumps(result.to_dict(), indent=2))
     return 0 if result.outcome == "succeeded" else 1
+
+
+def cmd_menubar(args: argparse.Namespace) -> int:
+    from . import app  # deferred: rumps/AppKit only load for the real app
+
+    app.RunnerApp(
+        args.dest,
+        args.publish_target,
+        interval_days=args.interval_days,
+        smb_url=_smb_url(args),
+        from_date=args.from_date,
+    ).run()
+    return 0
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -105,15 +91,16 @@ def main(argv: list[str] | None = None) -> int:
 
     p_run = sub.add_parser("run-once", help="run a single backup now and print the RunResult as JSON")
     _add_common(p_run)
-    p_run.add_argument("--from-date", default=None, help="bound the export (testing only, never in production)")
     p_run.add_argument("--dry-run", action="store_true", help="pass --dry-run to osxphotos export; nothing is recorded")
     p_run.set_defaults(func=cmd_run_once)
 
+    p_menubar = sub.add_parser("menubar", help="run the menu bar app + weekly scheduler (LaunchAgent entry point)")
+    _add_common(p_menubar)
+    p_menubar.add_argument("--interval-days", type=float, default=7.0, help="days between scheduled runs")
+    p_menubar.set_defaults(func=cmd_menubar)
+
     p_status = sub.add_parser("status", help="print the local status.json and recent history")
     p_status.set_defaults(func=cmd_status)
-
-    p_menubar = sub.add_parser("menubar", help="not yet implemented (Phase 5)")
-    p_menubar.set_defaults(func=lambda a: (print("menubar: not implemented yet", file=sys.stderr), 2)[1])
 
     args = parser.parse_args(argv)
     return args.func(args)

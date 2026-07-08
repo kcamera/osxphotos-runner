@@ -152,9 +152,14 @@ def run_backup(
     log_path: str | Path,
     from_date: str | None = None,
     dry_run: bool = False,
+    started_at: datetime | None = None,
 ) -> RunResult:
-    """One full backup run: mount preflight, export subprocess, parse, verdict."""
-    started = datetime.now().astimezone()
+    """One full backup run: mount preflight, export subprocess, parse, verdict.
+
+    *started_at* lets the caller stamp the run with the same timestamp it put
+    in the run-in-progress marker, so the two can be matched up afterwards.
+    """
+    started = started_at or datetime.now().astimezone()
     t0 = time.monotonic()
     result = RunResult(
         outcome="failed",
