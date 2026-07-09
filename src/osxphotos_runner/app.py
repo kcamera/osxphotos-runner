@@ -87,11 +87,33 @@ class RunnerApp(rumps.App):
         interrupted = runner.recover_interrupted()
         if interrupted:
             self._state = "error"
+        self._announce_schedule()
 
         self._keep_awake()
         self.timer = rumps.Timer(self.tick, TICK_SECONDS)
         self.timer.start()
         self.tick()
+
+    def _announce_schedule(self) -> None:
+        """Stamp the current schedule into status.json (and the dashboard) at
+        startup — otherwise a run-once (schedule: None) or a stale next_run
+        from before a reboot lingers until the next scheduled run completes."""
+        st = status.read_status()
+        if st is None:
+            return
+        due = next_run_at(last_started_from_history(), self.interval, self.launched_at)
+        st["schedule"] = {
+            "interval_days": self.interval.days + self.interval.seconds / 86400,
+            "next_run": due.isoformat(timespec="seconds"),
+        }
+        status.write_status(st)
+        if self.publish_target:
+            try:
+                from . import publish
+
+                publish.publish(self.publish_target)
+            except publish.PublishError:
+                pass  # dashboard just keeps the previous files; next run republishes
 
     def _keep_awake(self) -> None:
         """Opt out of App Nap (idle *system* sleep stays allowed — pmset owns that)."""
